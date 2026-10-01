@@ -1,0 +1,5 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home2/cocread3/public_html/neon/wp-content/themes/neon-fiesta/
+    - /bin/cp -R * $DEPLOYPATH
