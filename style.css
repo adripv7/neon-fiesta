@@ -1,0 +1,36 @@
+/*
+Theme Name: Neon Fiesta
+Author: Cocreadores
+Version: 1.0
+*/
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #090014;
+    color: white;
+    font-family: Arial, sans-serif;
+}
+
+.hero {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    background: linear-gradient(135deg, #090014, #240046, #ff00aa);
+}
+
+.hero h1 {
+    font-size: 70px;
+    color: #00ffff;
+    text-shadow:
+        0 0 10px #00ffff,
+        0 0 30px #ff00aa;
+}
+
+.hero p {
+    font-size: 22px;
+}
