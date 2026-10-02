@@ -11,7 +11,7 @@
 
     <main class="hero">
         <section>
-            <p>31 DE DICIEMBRE</p>
+            <p>04 DE DICIEMBRE</p>
 
             <h1>Fiesta Neon</h1>
 
