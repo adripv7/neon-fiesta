@@ -9,6 +9,21 @@ $mesas = array(
     'Galaxy',
     'Negro'
 );
+
+global $wpdb;
+
+$tabla = $wpdb->prefix . 'neon_reservas';
+
+$reservas = $wpdb->get_results(
+    "SELECT mesa, asiento FROM $tabla",
+    ARRAY_A
+) ?: array();
+
+$ocupados_por_mesa = array();
+
+foreach ($reservas as $reserva) {
+    $ocupados_por_mesa[$reserva['mesa']][] = (int) $reserva['asiento'];
+}
 ?>
 
 <!DOCTYPE html>
@@ -16,7 +31,6 @@ $mesas = array(
 <head>
     <meta charset="<?php bloginfo('charset'); ?>">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
     <?php wp_head(); ?>
 </head>
 
@@ -50,16 +64,25 @@ $mesas = array(
 
         <?php foreach ($mesas as $mesa) : ?>
 
+            <?php
+            $ocupados = $ocupados_por_mesa[$mesa] ?? array();
+            $disponibles = 6 - count($ocupados);
+            ?>
+
             <button
-                class="table-card table-<?php echo esc_attr(strtolower($mesa)); ?>"
+                class="table-card table-<?php echo esc_attr(sanitize_title($mesa)); ?>"
                 data-table="<?php echo esc_attr($mesa); ?>"
             >
                 <strong>Mesa <?php echo esc_html($mesa); ?></strong>
 
-                <small>6/6 lugares</small>
+                <small>
+                    <?php echo esc_html($disponibles); ?>/6 lugares
+                </small>
 
                 <span class="seat-dots">
-                    ○ ○ ○ ○ ○ ○
+                    <?php for ($i = 1; $i <= 6; $i++) : ?>
+                        <?php echo in_array($i, $ocupados, true) ? '●' : '○'; ?>
+                    <?php endfor; ?>
                 </span>
             </button>
 
@@ -74,13 +97,9 @@ $mesas = array(
 
         <p class="eyebrow">SELECCIONA TU LUGAR</p>
 
-        <h2 id="selected-table-title">
-            Mesa
-        </h2>
+        <h2 id="selected-table-title">Mesa</h2>
 
-        <p>
-            Elige uno de los 6 lugares disponibles.
-        </p>
+        <p>Elige uno de los lugares disponibles.</p>
 
         <div id="seat-list" class="seat-list"></div>
 
@@ -89,17 +108,17 @@ $mesas = array(
 
             <label>
                 Nombre completo
-                <input type="text" id="reservation-name" required placeholder="Tu nombre">
+                <input id="reservation-name" type="text" required>
             </label>
 
             <label>
                 Correo
-                <input type="email"  id="reservation-email" required placeholder="tu@correo.com">
+                <input id="reservation-email" type="email" required>
             </label>
 
             <label>
                 Área o departamento
-                <input type="text"  id="reservation-area"  required placeholder="Tu área">
+                <input id="reservation-area" type="text" required>
             </label>
 
             <button type="submit" class="submit-button">
@@ -123,57 +142,6 @@ const backButton = document.querySelector('#back-button');
 
 let selectedTable = '';
 let selectedSeat = '';
-
-function actualizarTarjetaMesa(mesa, reservados) {
-    reservados = reservados.map(Number);
-
-    const tarjeta = Array.from(tableButtons).find(function(button) {
-        return button.dataset.table === mesa;
-    });
-
-    if (!tarjeta) {
-        return;
-    }
-
-    const disponibles = 6 - reservados.length;
-    const contador = tarjeta.querySelector('small');
-    const puntos = tarjeta.querySelector('.seat-dots');
-
-    contador.textContent = disponibles + '/6 lugares';
-
-    puntos.textContent = Array.from(
-        { length: 6 },
-        (_, index) => reservados.includes(index + 1) ? '●' : '○'
-    ).join(' ');
-}
-
-function cargarDisponibilidad() {
-    tableButtons.forEach(function(button) {
-        const mesa = button.dataset.table;
-
-        const data = new URLSearchParams({
-            action: 'neon_obtener_reservas',
-            mesa: mesa,
-            nonce: nonce
-        });
-
-        fetch(ajaxUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: data
-        })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                actualizarTarjetaMesa(mesa, result.data);
-            }
-        });
-    });
-}
-
-cargarDisponibilidad();
 
 tableButtons.forEach(function(button) {
     button.addEventListener('click', function() {
@@ -199,8 +167,9 @@ tableButtons.forEach(function(button) {
         })
         .then(response => response.json())
         .then(result => {
-            const reservados = result.success ? result.data.map(Number) : [];
-            actualizarTarjetaMesa(selectedTable, reservados);
+            const reservados = result.success
+                ? result.data.map(Number)
+                : [];
 
             seatList.innerHTML = '';
 
@@ -209,25 +178,25 @@ tableButtons.forEach(function(button) {
 
                 seat.type = 'button';
                 seat.className = 'seat-button';
-                seat.textContent = reservados.includes(number)
-                    ? 'Ocupado'
-                    : 'Lugar ' + number;
 
                 if (reservados.includes(number)) {
+                    seat.textContent = 'Ocupado';
                     seat.disabled = true;
                     seat.classList.add('reserved');
+                } else {
+                    seat.textContent = 'Lugar ' + number;
+
+                    seat.addEventListener('click', function() {
+                        selectedSeat = number;
+
+                        document
+                            .querySelectorAll('.seat-button')
+                            .forEach(item => item.classList.remove('selected'));
+
+                        seat.classList.add('selected');
+                        reservationForm.hidden = false;
+                    });
                 }
-
-                seat.addEventListener('click', function() {
-                    selectedSeat = number;
-
-                    document
-                        .querySelectorAll('.seat-button')
-                        .forEach(item => item.classList.remove('selected'));
-
-                    seat.classList.add('selected');
-                    reservationForm.hidden = false;
-                });
 
                 seatList.appendChild(seat);
             }
