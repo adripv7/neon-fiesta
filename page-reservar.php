@@ -125,6 +125,8 @@ let selectedTable = '';
 let selectedSeat = '';
 
 function actualizarTarjetaMesa(mesa, reservados) {
+    reservados = reservados.map(Number);
+
     const tarjeta = Array.from(tableButtons).find(function(button) {
         return button.dataset.table === mesa;
     });
@@ -197,7 +199,7 @@ tableButtons.forEach(function(button) {
         })
         .then(response => response.json())
         .then(result => {
-            const reservados = result.success ? result.data : [];
+            const reservados = result.success ? result.data.map(Number) : [];
             actualizarTarjetaMesa(selectedTable, reservados);
 
             seatList.innerHTML = '';
