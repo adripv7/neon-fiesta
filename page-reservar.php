@@ -41,10 +41,23 @@ foreach ($reservas as $reserva) {
         NEON COCREADORES
     </a>
 
-    <nav>
-        <a href="<?php echo esc_url(home_url('/')); ?>">Inicio</a>
-        <a href="<?php echo esc_url(home_url('/reservar/')); ?>">Reservar</a>
-    </nav>
+    <nav class="neon-nav">
+    <a href="<?php echo esc_url(home_url('/')); ?>">
+        Inicio
+    </a>
+
+    <a href="<?php echo esc_url(home_url('/#la-fiesta')); ?>">
+        La fiesta
+    </a>
+
+    <a href="<?php echo esc_url(home_url('/#colores')); ?>">
+        Colores
+    </a>
+
+    <a href="<?php echo esc_url(home_url('/reservar/')); ?>">
+        Reservar
+    </a>
+</nav>
 </header>
 
 <main class="reservation-page">
@@ -142,6 +155,56 @@ const backButton = document.querySelector('#back-button');
 
 let selectedTable = '';
 let selectedSeat = '';
+
+function actualizarTarjetaMesa(mesa, reservados) {
+    reservados = reservados.map(Number);
+
+    const tarjeta = Array.from(tableButtons).find(function(button) {
+        return button.dataset.table === mesa;
+    });
+
+    if (!tarjeta) {
+        return;
+    }
+
+    const contador = tarjeta.querySelector('small');
+    const puntos = tarjeta.querySelector('.seat-dots');
+
+    contador.textContent = (6 - reservados.length) + '/6 lugares';
+
+    puntos.textContent = Array.from(
+        { length: 6 },
+        (_, index) => reservados.includes(index + 1) ? '●' : '○'
+    ).join(' ');
+}
+
+function cargarDisponibilidad() {
+    tableButtons.forEach(function(button) {
+        const mesa = button.dataset.table;
+
+        const data = new URLSearchParams({
+            action: 'neon_obtener_reservas',
+            mesa: mesa,
+            nonce: nonce
+        });
+
+        fetch(ajaxUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: data
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                actualizarTarjetaMesa(mesa, result.data);
+            }
+        });
+    });
+}
+
+cargarDisponibilidad();
 
 tableButtons.forEach(function(button) {
     button.addEventListener('click', function() {
