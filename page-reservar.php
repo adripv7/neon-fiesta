@@ -89,17 +89,17 @@ $mesas = array(
 
             <label>
                 Nombre completo
-                <input type="text" required placeholder="Tu nombre">
+                <input type="text" id="reservation-name" required placeholder="Tu nombre">
             </label>
 
             <label>
                 Correo
-                <input type="email" required placeholder="tu@correo.com">
+                <input type="email"  id="reservation-email" required placeholder="tu@correo.com">
             </label>
 
             <label>
                 Área o departamento
-                <input type="text" required placeholder="Tu área">
+                <input type="text"  id="reservation-area"  required placeholder="Tu área">
             </label>
 
             <button type="submit" class="submit-button">
@@ -111,6 +111,9 @@ $mesas = array(
 </main>
 
 <script>
+const ajaxUrl = <?php echo wp_json_encode(admin_url('admin-ajax.php')); ?>;
+const nonce = <?php echo wp_json_encode(wp_create_nonce('neon_reserva')); ?>;
+
 const tableButtons = document.querySelectorAll('.table-card');
 const seatPanel = document.querySelector('#seat-panel');
 const seatList = document.querySelector('#seat-list');
@@ -126,32 +129,61 @@ tableButtons.forEach(function(button) {
         selectedTable = button.dataset.table;
         selectedTableTitle.textContent = 'Mesa ' + selectedTable;
 
-        seatList.innerHTML = '';
+        seatPanel.hidden = false;
         reservationForm.hidden = true;
+        seatList.innerHTML = 'Cargando lugares...';
 
-        for (let number = 1; number <= 6; number++) {
-            const seat = document.createElement('button');
+        const data = new URLSearchParams({
+            action: 'neon_obtener_reservas',
+            mesa: selectedTable,
+            nonce: nonce
+        });
 
-            seat.type = 'button';
-            seat.className = 'seat-button';
-            seat.textContent = 'Lugar ' + number;
+        fetch(ajaxUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: data
+        })
+        .then(response => response.json())
+        .then(result => {
+            const reservados = result.success ? result.data : [];
 
-            seat.addEventListener('click', function() {
-                selectedSeat = number;
+            seatList.innerHTML = '';
 
-                document.querySelectorAll('.seat-button').forEach(function(item) {
-                    item.classList.remove('selected');
+            for (let number = 1; number <= 6; number++) {
+                const seat = document.createElement('button');
+
+                seat.type = 'button';
+                seat.className = 'seat-button';
+                seat.textContent = reservados.includes(number)
+                    ? 'Ocupado'
+                    : 'Lugar ' + number;
+
+                if (reservados.includes(number)) {
+                    seat.disabled = true;
+                    seat.classList.add('reserved');
+                }
+
+                seat.addEventListener('click', function() {
+                    selectedSeat = number;
+
+                    document
+                        .querySelectorAll('.seat-button')
+                        .forEach(item => item.classList.remove('selected'));
+
+                    seat.classList.add('selected');
+                    reservationForm.hidden = false;
                 });
 
-                seat.classList.add('selected');
-                reservationForm.hidden = false;
-            });
+                seatList.appendChild(seat);
+            }
+        });
 
-            seatList.appendChild(seat);
-        }
-
-        seatPanel.hidden = false;
-        seatPanel.scrollIntoView({ behavior: 'smooth' });
+        seatPanel.scrollIntoView({
+            behavior: 'smooth'
+        });
     });
 });
 
@@ -163,12 +195,32 @@ backButton.addEventListener('click', function() {
 reservationForm.addEventListener('submit', function(event) {
     event.preventDefault();
 
-    alert(
-        'Reserva seleccionada: Mesa ' +
-        selectedTable +
-        ', Lugar ' +
-        selectedSeat
-    );
+    const data = new URLSearchParams({
+        action: 'neon_guardar_reserva',
+        mesa: selectedTable,
+        asiento: selectedSeat,
+        nombre: document.querySelector('#reservation-name').value,
+        correo: document.querySelector('#reservation-email').value,
+        area: document.querySelector('#reservation-area').value,
+        nonce: nonce
+    });
+
+    fetch(ajaxUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: data
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert('Reserva guardada correctamente.');
+            window.location.reload();
+        } else {
+            alert(result.data);
+        }
+    });
 });
 </script>
 
