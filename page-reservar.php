@@ -124,6 +124,55 @@ const backButton = document.querySelector('#back-button');
 let selectedTable = '';
 let selectedSeat = '';
 
+function actualizarTarjetaMesa(mesa, reservados) {
+    const tarjeta = Array.from(tableButtons).find(function(button) {
+        return button.dataset.table === mesa;
+    });
+
+    if (!tarjeta) {
+        return;
+    }
+
+    const disponibles = 6 - reservados.length;
+    const contador = tarjeta.querySelector('small');
+    const puntos = tarjeta.querySelector('.seat-dots');
+
+    contador.textContent = disponibles + '/6 lugares';
+
+    puntos.textContent = Array.from(
+        { length: 6 },
+        (_, index) => reservados.includes(index + 1) ? '●' : '○'
+    ).join(' ');
+}
+
+function cargarDisponibilidad() {
+    tableButtons.forEach(function(button) {
+        const mesa = button.dataset.table;
+
+        const data = new URLSearchParams({
+            action: 'neon_obtener_reservas',
+            mesa: mesa,
+            nonce: nonce
+        });
+
+        fetch(ajaxUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: data
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                actualizarTarjetaMesa(mesa, result.data);
+            }
+        });
+    });
+}
+
+cargarDisponibilidad();
+
 tableButtons.forEach(function(button) {
     button.addEventListener('click', function() {
         selectedTable = button.dataset.table;
@@ -149,6 +198,7 @@ tableButtons.forEach(function(button) {
         .then(response => response.json())
         .then(result => {
             const reservados = result.success ? result.data : [];
+            actualizarTarjetaMesa(selectedTable, reservados);
 
             seatList.innerHTML = '';
 
