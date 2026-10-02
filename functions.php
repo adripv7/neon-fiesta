@@ -14,6 +14,8 @@ add_action(
     'neon_fiesta_cargar_estilos'
 );
 
+<?php
+
 function neon_fiesta_cargar_estilos() {
     wp_enqueue_style(
         'neon-fiesta-estilos',
